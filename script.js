@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentChatId = null;
         adjustTextareaHeight();
         updateSendButtonState();
-        messageInput.focus();
+        // Убрали messageInput.focus();
     }
 
     // Переключает UI в режим активного чата (ИСПОЛЬЗУЕТ is-visually-hidden)
