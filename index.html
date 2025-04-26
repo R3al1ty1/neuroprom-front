@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нейропром</title>
+    <!-- Подключаем Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Подключаем шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Подключаем наш CSS -->
+    <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+    <!-- Оверлей для мобильного меню -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
+    <!-- Сайдбар (будет скрыт для анонимных) -->
+    <aside class="sidebar hidden" id="chat-list-sidebar">
+        <div class="sidebar-header">
+            <h2>Чаты</h2>
+            <button class="btn-icon new-chat-btn" id="new-chat-button" title="Создать новый чат">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="chat-list-container">
+            <ul class="chat-list" id="chat-list">
+                <li class="chat-list-message" id="chat-list-placeholder">Загрузка чатов...</li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Основной контейнер чата -->
+    <div class="main-chat-area">
+        <!-- Шапка -->
+        <header class="app-header">
+            <div style="display: flex; align-items: center;">
+                <button class="mobile-sidebar-toggle" id="mobile-sidebar-toggle" title="Показать/скрыть чаты">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Нейропром</h1>
+            </div>
+            <div class="header-buttons">
+                <span class="user-email" id="user-email"></span>
+                <button class="btn btn-secondary" id="auth-button">Войти / Регистрация</button>
+                <button class="btn btn-danger hidden" id="logout-button">Выйти</button>
+            </div>
+        </header>
+
+        <!-- Основная секция Чата -->
+        <div class="chat-window-container">
+
+            <!-- НОВОЕ: Состояние для начального анонимного экрана -->
+            <div class="initial-anonymous-state hidden" id="initial-anonymous-state">
+                <h2 class="initial-anonymous-title">Нейропром</h2>
+                <!-- Форма ввода будет перемещена сюда JSом -->
+            </div>
+
+            <!-- Область сообщений (скрыта для анонимных вначале) -->
+            <div class="chatbox hidden" id="chatbox">
+                <!-- Сообщения будут добавляться сюда -->
+                 <div class="placeholder-message">Загрузка...</div>
+            </div>
+
+            <!-- Индикатор печати -->
+            <div class="typing-indicator-wrapper" id="loading-indicator">
+                <div class="typing-indicator">
+                    <span>Ассистент печатает</span>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <!-- Ошибка чата -->
+            <div class="chat-error-message" id="chat-error"></div>
+
+            <!-- Контейнер формы ввода (может быть скрыт или содержать форму) -->
+            <div class="message-form-container" id="message-form-container">
+                 <form id="message-form">
+                     <div class="message-input-wrapper">
+                        <textarea
+                            id="message-input"
+                            placeholder="Введите сообщение..."
+                            required
+                            rows="1"
+                            class="message-input"
+                        ></textarea>
+                        <button type="submit" class="btn-icon send-btn" id="send-button" title="Отправить сообщение" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция Аутентификации (Модальное окно) -->
+    <section class="auth-modal-overlay" id="auth-section">
+         <div class="auth-modal-content">
+            <button class="btn-icon close-auth-btn" id="cancel-auth-button" title="Закрыть">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 id="auth-title">Вход</h2>
+            <form class="auth-form" id="auth-form">
+                <div class="form-group">
+                    <label for="email">Эл. почта:</label>
+                    <input type="email" id="email" required class="auth-input" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Пароль:</label>
+                    <input type="password" id="password" required class="auth-input" placeholder="••••••••">
+                </div>
+                <div class="auth-error-message" id="auth-error"></div>
+                <div class="auth-actions">
+                     <button type="submit" class="btn btn-primary" id="auth-submit-button">Войти</button>
+                     <button type="button" class="switch-auth-mode-btn" id="switch-auth-mode">Нет аккаунта? Зарегистрироваться</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
