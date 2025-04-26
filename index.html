@@ -14,10 +14,10 @@
     <link rel="stylesheet" href="chat.css">
 </head>
 <body>
-    <!-- Оверлей для мобильного меню -->
+    <!-- Оверлей для мобильного меню (управляется JS классом .visible) -->
     <div class="mobile-overlay" id="mobile-overlay"></div>
 
-    <!-- Сайдбар (будет скрыт для анонимных) -->
+    <!-- Сайдбар (управляется JS классом .hidden на десктопе и .sidebar-visible-mobile на мобильных) -->
     <aside class="sidebar hidden" id="chat-list-sidebar">
         <div class="sidebar-header">
             <h2>Чаты</h2>
@@ -27,23 +27,28 @@
         </div>
         <div class="chat-list-container">
             <ul class="chat-list" id="chat-list">
+                <!-- Плейсхолдер загрузки/ошибки (управляется JS классом .hidden) -->
                 <li class="chat-list-message" id="chat-list-placeholder">Загрузка чатов...</li>
+                <!-- Элементы чатов будут добавлены сюда JSом -->
             </ul>
         </div>
     </aside>
 
     <!-- Основной контейнер чата -->
     <div class="main-chat-area">
-        <!-- Шапка -->
+        <!-- Шапка (станет fixed на мобильных через CSS) -->
         <header class="app-header">
             <div style="display: flex; align-items: center;">
-                <button class="mobile-sidebar-toggle" id="mobile-sidebar-toggle" title="Показать/скрыть чаты">
+                <!-- Кнопка-бургер (управляется JS классом .hidden) -->
+                <button class="mobile-sidebar-toggle hidden" id="mobile-sidebar-toggle" title="Показать/скрыть чаты" aria-expanded="false">
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>Нейропром</h1>
             </div>
             <div class="header-buttons">
+                <!-- Email пользователя (управляется JS классом .visible) -->
                 <span class="user-email" id="user-email"></span>
+                <!-- Кнопки Войти/Выйти (управляется JS классом .hidden) -->
                 <button class="btn btn-secondary" id="auth-button">Войти / Регистрация</button>
                 <button class="btn btn-danger hidden" id="logout-button">Выйти</button>
             </div>
@@ -52,19 +57,22 @@
         <!-- Основная секция Чата -->
         <div class="chat-window-container">
 
-            <!-- НОВОЕ: Состояние для начального анонимного экрана -->
-            <div class="initial-anonymous-state hidden" id="initial-anonymous-state">
-                <h2 class="initial-anonymous-title">Нейропром</h2>
-                <!-- Форма ввода будет перемещена сюда JSом -->
+            <!-- Состояние для начального анонимного экрана (управляется JS классом .is-visually-hidden) -->
+            <div class="initial-anonymous-state is-visually-hidden" id="initial-anonymous-state">
+                 <!-- is-visually-hidden добавлен по умолчанию, JS уберет его если нужно -->
+                <h2 class="initial-anonymous-title">Нейропром - Ваш ассистент по сплавам</h2>
+                <!-- Форма ввода будет перемещена сюда JSом при необходимости -->
             </div>
 
-            <!-- Область сообщений (скрыта для анонимных вначале) -->
-            <div class="chatbox hidden" id="chatbox">
-                <!-- Сообщения будут добавляться сюда -->
+            <!-- Область сообщений (управляется JS классом .is-visually-hidden) -->
+            <div class="chatbox is-visually-hidden" id="chatbox">
+                <!-- is-visually-hidden добавлен по умолчанию, JS уберет его если нужно -->
+                <!-- Плейсхолдер загрузки/ошибки/пустого чата -->
                  <div class="placeholder-message">Загрузка...</div>
+                <!-- Сообщения будут добавляться сюда -->
             </div>
 
-            <!-- Индикатор печати -->
+            <!-- Индикатор печати (управляется JS классом .visible) -->
             <div class="typing-indicator-wrapper" id="loading-indicator">
                 <div class="typing-indicator">
                     <span>Ассистент печатает</span>
@@ -74,11 +82,13 @@
                 </div>
             </div>
 
-            <!-- Ошибка чата -->
+            <!-- Ошибка чата (управляется JS классом .visible) -->
             <div class="chat-error-message" id="chat-error"></div>
 
-            <!-- Контейнер формы ввода (может быть скрыт или содержать форму) -->
-            <div class="message-form-container" id="message-form-container">
+            <!-- Контейнер формы ввода (управляется JS классом .is-visually-hidden) -->
+            <div class="message-form-container is-visually-hidden" id="message-form-container">
+                <!-- is-visually-hidden добавлен по умолчанию, JS уберет его если нужно -->
+                 <!-- Форма ввода перемещается JS между этим контейнером и initial-anonymous-state -->
                  <form id="message-form">
                      <div class="message-input-wrapper">
                         <textarea
@@ -97,14 +107,14 @@
         </div>
     </div>
 
-    <!-- Секция Аутентификации (Модальное окно) -->
+    <!-- Секция Аутентификации (Модальное окно, управляется JS классом .visible) -->
     <section class="auth-modal-overlay" id="auth-section">
          <div class="auth-modal-content">
             <button class="btn-icon close-auth-btn" id="cancel-auth-button" title="Закрыть">
                 <i class="fas fa-times"></i>
             </button>
             <h2 id="auth-title">Вход</h2>
-            <form class="auth-form" id="auth-form">
+            <form class="auth-form" id="auth-form" novalidate> <!-- Добавил novalidate -->
                 <div class="form-group">
                     <label for="email">Эл. почта:</label>
                     <input type="email" id="email" required class="auth-input" placeholder="your@email.com">
@@ -113,6 +123,7 @@
                     <label for="password">Пароль:</label>
                     <input type="password" id="password" required class="auth-input" placeholder="••••••••">
                 </div>
+                <!-- Ошибка аутентификации (управляется JS классом .visible) -->
                 <div class="auth-error-message" id="auth-error"></div>
                 <div class="auth-actions">
                      <button type="submit" class="btn btn-primary" id="auth-submit-button">Войти</button>

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = 'http://localhost:8000/api'; // ЗАМЕНИТЕ, ЕСЛИ НУЖНО
+    const API_URL = '/api'; // ЗАМЕНИТЕ, ЕСЛИ НУЖНО
 
     // --- DOM Элементы ---
     const chatbox = document.getElementById('chatbox');
@@ -26,9 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const newChatButton = document.getElementById('new-chat-button');
     const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
     const mobileOverlay = document.getElementById('mobile-overlay');
-    // Новые элементы для анонимного UI
     const initialAnonymousStateContainer = document.getElementById('initial-anonymous-state');
-    const messageFormContainer = document.getElementById('message-form-container'); // Оригинальный контейнер формы
+    const messageFormContainer = document.getElementById('message-form-container');
 
 
     // --- Состояние приложения ---
@@ -113,128 +112,121 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Функции отрисовки UI ---
     function addMessageToChatbox(message, isUser) {
-        // Убедимся, что chatbox видим перед добавлением сообщения
-        if (chatbox.classList.contains('hidden')) {
-            chatbox.classList.remove('hidden');
-            chatbox.innerHTML = ''; // Очистить, если там было что-то вроде "Загрузка"
+        // Используем is-visually-hidden для плавного показа
+        if (chatbox.classList.contains('is-visually-hidden')) {
+             chatbox.classList.remove('is-visually-hidden');
+            chatbox.innerHTML = '';
         }
         const placeholder = chatbox.querySelector('.placeholder-message');
         if (placeholder) placeholder.remove();
 
         const wrapper = document.createElement('div');
         wrapper.classList.add('message-wrapper', isUser ? 'user' : 'assistant');
-
         if (!isUser) {
             const label = document.createElement('div');
             label.classList.add('message-sender-label');
             label.textContent = 'Ассистент Нейропром';
             wrapper.appendChild(label);
         }
-
         const bubble = document.createElement('div');
         bubble.classList.add('message-bubble', isUser ? 'user' : 'assistant');
-        // Простая обработка новой строки (можно улучшить для Markdown)
         bubble.innerHTML = message.content.replace(/\n/g, '<br>');
         wrapper.appendChild(bubble);
         chatbox.appendChild(wrapper);
-
-        // Плавный скролл вниз
         scrollToBottom();
     }
 
     function clearChatbox() {
         chatbox.innerHTML = '<div class="placeholder-message">Загрузка...</div>';
-        // Скрываем chatbox при очистке, если не авторизован и нет чата
-        if (!authToken && !currentChatId) {
-            chatbox.classList.add('hidden');
-        } else {
-             chatbox.classList.remove('hidden');
-        }
+        // Используем is-visually-hidden для плавного скрытия, если нужно
+         if (!authToken && !currentChatId) {
+              chatbox.classList.add('is-visually-hidden');
+         } else {
+             chatbox.classList.remove('is-visually-hidden');
+         }
     }
 
     function showChatError(message) { chatError.textContent = `Ошибка: ${message}`; chatError.classList.add('visible'); }
     function showAuthError(message) { authError.textContent = `Ошибка: ${message}`; authError.classList.add('visible'); }
     function hideErrors() { chatError.classList.remove('visible'); authError.classList.remove('visible'); }
+    function scrollToBottom() { setTimeout(() => { chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: 'smooth' }); }, 50); }
+    function showGlobalLoader(show) { /* console.log("Global loader:", show); */ }
+    function showTypingIndicator(show) { loadingIndicator.classList.toggle('visible', show); if (show) { scrollToBottom(); } }
 
-    function scrollToBottom() {
-         chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: 'smooth' });
-    }
-
-    // Глобальный лоадер можно реализовать (например, спиннер поверх всего)
-    function showGlobalLoader(show) {
-        // Placeholder: Добавьте здесь логику показа/скрытия глобального лоадера, если он нужен
-        // console.log("Global loader:", show);
-    }
-
-    function showTypingIndicator(show) {
-        loadingIndicator.classList.toggle('visible', show);
-        if (show) {
-             // Скролл вниз, чтобы индикатор был виден
-             setTimeout(scrollToBottom, 50);
-        }
-    }
-
-    // Показывает начальный UI для анонимного пользователя
+    // Показывает начальный UI для анонимного пользователя (ИСПОЛЬЗУЕТ is-visually-hidden)
     function setupInitialAnonymousUI() {
         console.log("Setting up initial anonymous UI");
-        clearChatbox(); // Скроет chatbox и покажет "Загрузка" (которую мы потом скроем)
-        chatbox.classList.add('hidden'); // Явно скрываем чатбокс
-        initialAnonymousStateContainer.classList.remove('hidden'); // Показываем контейнер с заголовком
-        messageFormContainer.classList.add('hidden'); // Скрываем стандартный контейнер формы
+        clearChatbox(); // Скроет чатбокс через is-visually-hidden
+        initialAnonymousStateContainer.classList.remove('is-visually-hidden'); // Показываем
+        messageFormContainer.classList.add('is-visually-hidden'); // Скрываем стандартную форму
 
-        // Перемещаем форму внутрь .initial-anonymous-state
-        initialAnonymousStateContainer.appendChild(messageForm);
-
-        messageInput.placeholder = "Начните диалог..."; // Другой плейсхолдер
+        if (!initialAnonymousStateContainer.contains(messageForm)) {
+             initialAnonymousStateContainer.appendChild(messageForm);
+        }
+        messageInput.placeholder = "Начните диалог...";
         isInitialAnonymousView = true;
-        currentChatId = null; // Убедимся, что ID сброшен
+        currentChatId = null;
+        adjustTextareaHeight();
+        updateSendButtonState();
+        messageInput.focus();
+    }
+
+    // Переключает UI в режим активного чата (ИСПОЛЬЗУЕТ is-visually-hidden)
+    function switchToChattingUI() {
+        console.log("Switching to chatting UI");
+        if (!isInitialAnonymousView) return;
+
+        initialAnonymousStateContainer.classList.add('is-visually-hidden'); // Скрываем
+        if (!messageFormContainer.contains(messageForm)) {
+            messageFormContainer.appendChild(messageForm);
+        }
+        messageFormContainer.classList.remove('is-visually-hidden'); // Показываем
+        chatbox.classList.remove('is-visually-hidden'); // Показываем
+        chatbox.innerHTML = '';
+
+        messageInput.placeholder = "Введите сообщение...";
+        isInitialAnonymousView = false;
         adjustTextareaHeight();
         updateSendButtonState();
     }
 
-    // Переключает UI в режим активного чата (после первого сообщения анонима)
-    function switchToChattingUI() {
-        console.log("Switching to chatting UI");
-        if (!isInitialAnonymousView) return; // Не переключать, если уже в режиме чата
-
-        initialAnonymousStateContainer.classList.add('hidden'); // Скрываем контейнер с заголовком
-        // Возвращаем форму в её стандартный контейнер
-        messageFormContainer.appendChild(messageForm);
-        messageFormContainer.classList.remove('hidden'); // Показываем стандартный контейнер формы
-        chatbox.classList.remove('hidden'); // Показываем chatbox
-        chatbox.innerHTML = ''; // Очищаем от плейсхолдеров типа "Загрузка"
-
-        messageInput.placeholder = "Введите сообщение..."; // Стандартный плейсхолдер
-        isInitialAnonymousView = false;
-        adjustTextareaHeight();
-        updateSendButtonState(); // Обновить состояние кнопки/инпута
-    }
-
+    // Обновление UI аутентификации (ИСПОЛЬЗУЕТ .hidden для кнопок и сайдбара на десктопе)
     function updateAuthUI() {
         const isLoggedIn = !!authToken;
+        // Кнопки Войти/Выйти - используем .hidden (display: none)
         authButton.classList.toggle('hidden', isLoggedIn);
         logoutButton.classList.toggle('hidden', !isLoggedIn);
+
         userEmailSpan.classList.toggle('visible', isLoggedIn && !!userEmail);
         if (isLoggedIn && userEmail) userEmailSpan.textContent = userEmail;
 
-        // Управление сайдбаром
-        chatListSidebar.classList.toggle('hidden', !isLoggedIn); // Скрываем сайдбар если НЕ залогинен
-        mobileSidebarToggle.style.display = isLoggedIn ? 'block' : 'none'; // Показываем бургер только залогиненным
-
-        if (!isLoggedIn) {
-            closeMobileSidebar(); // Закрываем мобильный сайдбар при выходе
+        // Управление сайдбаром (Десктоп: .hidden, Мобильный: класс .sidebar-visible-mobile)
+        if (window.innerWidth > 768) { // Десктоп
+             chatListSidebar.classList.toggle('hidden', !isLoggedIn); // Используем display: none
+             mobileSidebarToggle.classList.add('hidden'); // Бургер всегда скрыт на десктопе
+             // Убираем класс видимости мобильного сайдбара, если он был
+             chatListSidebar.classList.remove('sidebar-visible-mobile');
+             isSidebarVisibleMobile = false; // Сбрасываем флаг
+        } else { // Мобильный
+             // Скрываем через .hidden по умолчанию, если пользователь не вошел
+             chatListSidebar.classList.toggle('hidden', !isLoggedIn);
+             mobileSidebarToggle.classList.toggle('hidden', !isLoggedIn); // Показываем бургер только если залогинен
+             // Класс sidebar-visible-mobile управляется функциями open/closeMobileSidebar
+             if (!isLoggedIn) {
+                 closeMobileSidebar(); // Принудительно закрыть, если разлогинились
+             }
         }
-        // Обновляем основной вид чата при смене статуса авторизации
-        initializeAppUI();
+
+        // Обновляем основной вид чата
+        initializeAppUI(); // Эта функция должна учитывать новые классы is-visually-hidden
     }
 
-
     function renderChatList() {
-        // Не рендерим список, если не авторизован
+        // Не рендерим список, если не авторизован (сайдбар скрыт через updateAuthUI)
         if (!authToken) {
             chatListUl.innerHTML = '';
             chatListPlaceholder.textContent = "Войдите, чтобы видеть чаты.";
-            chatListPlaceholder.classList.remove('hidden');
+            chatListPlaceholder.classList.remove('hidden'); // Показываем плейсхолдер
             return;
         }
 
@@ -243,7 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
             chatListPlaceholder.textContent = "Чатов пока нет.";
             chatListPlaceholder.classList.remove('hidden');
         } else {
-            chatListPlaceholder.classList.add('hidden');
+            chatListPlaceholder.classList.add('hidden'); // Скрываем плейсхолдер
+            // Сортируем чаты по последнему сообщению (если есть) или дате создания
+            userChats.sort((a, b) => new Date(b.last_updated || b.created_at || 0) - new Date(a.last_updated || a.created_at || 0));
+
             userChats.forEach(chat => {
                 const li = document.createElement('li');
                 li.classList.add('chat-item');
@@ -251,17 +246,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const titleSpan = document.createElement('span');
                 titleSpan.classList.add('chat-title');
-                // Улучшенная логика заголовка: ищем первое сообщение пользователя
-                let chatTitle = `Чат ${chat.id.substring(0, 4)}`; // Default
-                 if (chat.messages && chat.messages.length > 0) {
-                    // Ищем первое сообщение НЕ ассистента
+                let chatTitle = chat.title || `Чат ${chat.id.substring(0, 4)}`; // Default title
+                 if (!chat.title && chat.messages && chat.messages.length > 0) {
                     const firstUserMsg = chat.messages.find(msg => !msg.is_assistant);
                     if (firstUserMsg) {
                          const content = firstUserMsg.content;
                          chatTitle = content.substring(0, 25) + (content.length > 25 ? '...' : '');
                     } else if (chat.messages[0]) { // Если только сообщения ассистента, берем первое
                          const content = chat.messages[0].content;
-                         chatTitle = content.substring(0, 25) + (content.length > 25 ? '...' : '');
+                         chatTitle = `А: ${content.substring(0, 23)}` + (content.length > 23 ? '...' : '');
                     }
                  }
                 titleSpan.textContent = chatTitle;
@@ -283,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 li.addEventListener('click', () => {
                     handleSelectChat(chat.id);
-                    closeMobileSidebar();
+                    // closeMobileSidebar(); // Закрытие сайдбара происходит в handleSelectChat, если он мобильный
                 });
                 chatListUl.appendChild(li);
             });
@@ -299,16 +292,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Логика Чата ---
      async function loadChatHistory(chatId) {
         if (!chatId || isLoadingMessages || !authToken) return; // Загружаем историю только для авторизованных
-        clearChatbox(); // Очистит и покажет "Загрузка..."
+        clearChatbox(); // Очистит и покажет "Загрузка...", использует is-visually-hidden
         currentChatId = chatId;
         setActiveChatItem(chatId);
         isLoadingMessages = true;
-        chatbox.classList.remove('hidden'); // Убедимся, что chatbox видим
-        initialAnonymousStateContainer.classList.add('hidden'); // Скрываем анонимный вид, если был
-        messageFormContainer.classList.remove('hidden'); // Показываем стандартный инпут
+        chatbox.classList.remove('is-visually-hidden'); // Показываем плавно
+        initialAnonymousStateContainer.classList.add('is-visually-hidden'); // Скрываем анонимный вид, если был (плавно)
+        messageFormContainer.classList.remove('is-visually-hidden'); // Показываем стандартный инпут (плавно)
+        // Убедимся, что форма на месте
+        if (!messageFormContainer.contains(messageForm)) {
+            messageFormContainer.appendChild(messageForm);
+            adjustTextareaHeight(); // Пересчитать высоту после перемещения
+        }
 
         try {
-            // Загружаем историю только для авторизованных
             const chatData = await apiRequest(`/chats/${chatId}`, 'GET', null, true); // requireAuth = true
             chatbox.innerHTML = ''; // Очищаем от "Загрузка..."
             if (chatData && chatData.messages && chatData.messages.length > 0) {
@@ -319,254 +316,196 @@ document.addEventListener('DOMContentLoaded', () => {
             // Обновляем данные чата в локальном кеше
             const chatIndex = userChats.findIndex(c => c.id === chatId);
             if (chatIndex > -1) userChats[chatIndex] = { ...userChats[chatIndex], ...chatData };
+            renderChatList(); // Обновить список (может обновить заголовок)
+            setActiveChatItem(chatId); // Повторно установить активный элемент
 
         } catch (error) {
             // Ошибка уже обработана в apiRequest и показана (или был logout)
-            // chatbox.innerHTML = `<div class="placeholder-message error">Не удалось загрузить чат.</div>`;
             currentChatId = null;
             setActiveChatItem(null);
             if (!error.message.includes("Сессия истекла")) { // Не сбрасываем, если проблема с сессией (уже разлогинились)
                  clearChatbox();
-                 chatbox.innerHTML = '<div class="placeholder-message error">Не удалось загрузить чат.</div>';
+                 chatbox.innerHTML = `<div class="placeholder-message error">Не удалось загрузить чат: ${error.message}</div>`;
             }
         } finally {
             isLoadingMessages = false;
             updateSendButtonState();
-            // Плавный скролл в самый конец после загрузки
-            setTimeout(scrollToBottom, 100);
+            scrollToBottom();
         }
     }
 
-
-    // --- Отправка сообщения (Обновлено для анонимов) ---
     async function sendMessage(content) {
-        if (isSendingMessage) return; // Базовая проверка
-
+        if (isSendingMessage) return;
         hideErrors();
-        const userMessage = { content: content, timestamp: new Date().toISOString() }; // Данные для UI
+        const userMessage = { content: content, is_assistant: false, timestamp: new Date().toISOString() };
 
-        // --- Логика для ПЕРВОГО сообщения анонимного пользователя ---
+        // Первый анонимный
         if (!authToken && !currentChatId) {
-            if (!isInitialAnonymousView) {
-                console.error("Error: Trying to send first anonymous message but not in initial view.");
-                showChatError("Произошла внутренняя ошибка. Обновите страницу.");
-                return;
-            }
+            if (!isInitialAnonymousView) { console.error("Error:..."); showChatError("..."); return; }
             console.log("Sending first anonymous message...");
             isSendingMessage = true;
             updateSendButtonState();
-            // Не показываем индикатор печати ДО создания чата
-            // showTypingIndicator(true); // Рано
-
+            messageInput.value = ''; adjustTextareaHeight();
             try {
-                // 1. Создать анонимный чат
                  console.log("Creating anonymous chat...");
-                 // !!! ВАЖНО: Тело запроса { is_anonymous: true } может отличаться для вашего API !!!
-                 const newChat = await apiRequest('/chats/', 'POST', { is_anonymous: true }, false); // requireAuth = false
-                 if (!newChat || !newChat.id) {
-                     throw new Error("Не удалось создать анонимный чат на сервере.");
-                 }
-                 currentChatId = newChat.id;
-                 console.log("Anonymous chat created:", currentChatId);
-
-                // 2. Переключить UI на режим чата
-                switchToChattingUI();
-
-                // 3. Добавить сообщение пользователя в видимый chatbox
-                addMessageToChatbox(userMessage, true);
-                messageInput.value = ''; // Очистить поле ввода
-                adjustTextareaHeight();
-
-                // 4. Показать индикатор печати ПЕРЕД отправкой сообщения на созданный ID
-                showTypingIndicator(true);
-
-                // 5. Отправить сообщение в созданный чат
-                console.log("Sending message content to anonymous chat:", currentChatId);
-                const response = await apiRequest(`/chats/${currentChatId}/messages/`, 'POST', { content }, false); // requireAuth = false
-                 showTypingIndicator(false); // Скрыть индикатор после получения ответа
-
-                if (response && response.assistant_message) {
-                    addMessageToChatbox(response.assistant_message, false);
-                } else {
-                    // Если бэкенд не вернул сообщение ассистента сразу
-                    console.warn("No assistant message in response to first anonymous message.");
-                }
-
+                 const newChat = await apiRequest('/chats/', 'POST', { is_anonymous: true }, false);
+                 if (!newChat || !newChat.id) { throw new Error("Не удалось создать анонимный чат на сервере."); }
+                 currentChatId = newChat.id; console.log("Anonymous chat created:", currentChatId);
+                 switchToChattingUI(); // Переключает видимость через is-visually-hidden
+                 addMessageToChatbox(userMessage, true);
+                 showTypingIndicator(true);
+                 console.log("Sending message content to anonymous chat:", currentChatId);
+                 const response = await apiRequest(`/chats/${currentChatId}/messages/`, 'POST', { content: content }, false);
+                 showTypingIndicator(false);
+                 if (response && response.assistant_message) { addMessageToChatbox(response.assistant_message, false); }
+                 else { console.warn("No assistant message..."); }
             } catch (error) {
-                showChatError(`Не удалось начать диалог: ${error.message}`);
                 showTypingIndicator(false);
-                // НЕ сбрасываем currentChatId здесь, если чат УЖЕ создан, но отправка не удалась.
-                // Если ОШИБКА СОЗДАНИЯ чата - currentChatId останется null.
-                if (!currentChatId) {
-                    setupInitialAnonymousUI(); // Вернуть начальный вид, если даже чат не создался
-                } else {
-                     // Если чат создан, но отправка упала, UI уже переключен.
-                     // Просто показываем ошибку. Пользователь может попробовать еще раз.
-                     // Можно добавить сообщение об ошибке прямо в чат
-                     addMessageToChatbox({ content: `Ошибка отправки: ${error.message}`, timestamp: new Date().toISOString() }, false);
-                }
-            } finally {
-                isSendingMessage = false;
-                updateSendButtonState();
-                messageInput.focus();
-            }
-            return; // Завершаем выполнение функции здесь для первого анонимного сообщения
-        }
-        // --- Конец логики для первого анонимного сообщения ---
-
-        // --- Логика для авторизованных пользователей ИЛИ последующих анонимных сообщений ---
-        if (!currentChatId) {
-            showChatError("Пожалуйста, выберите или создайте чат."); // Для авторизованных
+                showChatError(`Не удалось начать диалог: ${error.message}`);
+                if (!currentChatId) { setupInitialAnonymousUI(); } // Вернуть через is-visually-hidden
+                else { addMessageToChatbox({ content: `Ошибка отправки: ${error.message}`, is_assistant: true, timestamp: new Date().toISOString() }, false); }
+            } finally { isSendingMessage = false; updateSendButtonState(); messageInput.focus(); }
             return;
         }
 
-        isSendingMessage = true;
-        updateSendButtonState();
-        addMessageToChatbox(userMessage, true); // Показываем сообщение пользователя сразу
-        messageInput.value = '';
-        adjustTextareaHeight();
-        showTypingIndicator(true); // Показываем индикатор
-
+        // Авторизованные или последующие анонимные
+        if (!currentChatId) { showChatError("Пожалуйста, выберите или создайте чат."); return; }
+        isSendingMessage = true; updateSendButtonState();
+        addMessageToChatbox(userMessage, true);
+        messageInput.value = ''; adjustTextareaHeight();
+        showTypingIndicator(true);
         try {
-            // Отправляем сообщение, requireAuth зависит от наличия токена
-            const response = await apiRequest(`/chats/${currentChatId}/messages/`, 'POST', { content }, !!authToken);
-            showTypingIndicator(false); // Скрываем индикатор после ответа
-
+            const response = await apiRequest(`/chats/${currentChatId}/messages/`, 'POST', { content: content }, !!authToken);
+            showTypingIndicator(false);
             if (response && response.assistant_message) {
                 addMessageToChatbox(response.assistant_message, false);
-            } else {
-                 console.warn("No assistant message in response.");
-                 // Можно добавить плейсхолдер или сообщение об отсутствии ответа
-                 // addMessageToChatbox({ content: "[Нет ответа от ассистента]", timestamp: new Date().toISOString() }, false);
-            }
+                 if (response.chat) { // Обновляем чат в кеше
+                      const chatIndex = userChats.findIndex(c => c.id === currentChatId);
+                      if (chatIndex > -1) {
+                           userChats[chatIndex] = { ...userChats[chatIndex], ...response.chat };
+                           renderChatList(); // Перерисовать список для обновления времени/заголовка
+                           setActiveChatItem(currentChatId);
+                      }
+                 }
+            } else { console.warn("No assistant message..."); }
         } catch (error) {
             showTypingIndicator(false);
-            // Ошибка уже показана через showChatError в apiRequest (если это не ошибка сессии)
-             // Добавляем сообщение об ошибке в чат для наглядности
-             if (!error.message.includes("Сессия истекла")) {
-                addMessageToChatbox({ content: `Ошибка отправки: ${error.message}`, timestamp: new Date().toISOString() }, false);
-             }
-        } finally {
-            isSendingMessage = false;
-            updateSendButtonState();
-            messageInput.focus();
-        }
+             if (!error.message.includes("Сессия истекла")) { addMessageToChatbox({ content: `Ошибка отправки: ${error.message}`, is_assistant: true, timestamp: new Date().toISOString() }, false); }
+        } finally { isSendingMessage = false; updateSendButtonState(); messageInput.focus(); }
     }
 
 
-    // Обновлено состояние кнопки/инпута
     function updateSendButtonState() {
         const hasContent = messageInput.value.trim().length > 0;
-        const canInteract = !isSendingMessage && !isLoadingApi && !isLoadingMessages;
-
-        let isDisabled = !canInteract || !hasContent;
-        let placeholder = "Введите сообщение...";
+        const canInteract = !isLoadingApi && !isLoadingMessages && !isSendingMessage;
+        let isButtonDisabled = !canInteract || !hasContent;
         let isInputDisabled = !canInteract;
+        let placeholder = "Введите сообщение...";
 
         if (authToken) {
             // Авторизованный пользователь
-            if (!currentChatId) {
-                isDisabled = true; // Нельзя отправить без чата
-                isInputDisabled = true; // Нельзя вводить без чата
-                placeholder = "Выберите или создайте чат";
+            if (!currentChatId && userChats.length > 0) { // Чаты есть, но не выбран
+                isButtonDisabled = true;
+                isInputDisabled = true;
+                placeholder = "Выберите чат для начала";
+            } else if (!currentChatId && userChats.length === 0 && !isLoadingApi) { // Чатов нет
+                 isButtonDisabled = true;
+                 isInputDisabled = true;
+                 placeholder = "Создайте новый чат";
+            } else if (!currentChatId) { // Идет загрузка или ошибка
+                 isButtonDisabled = true;
+                 isInputDisabled = true;
+                 placeholder = "Загрузка...";
             }
-            // Иначе (есть чат): isDisabled и isInputDisabled зависят только от canInteract и hasContent
+            // Если чат выбран (currentChatId есть), isButtonDisabled/isInputDisabled зависят от canInteract/hasContent
         } else {
             // Анонимный пользователь
             if (isInitialAnonymousView) {
                 placeholder = "Начните диалог...";
-                // Можно отправлять, если есть контент и нет загрузки
-                isDisabled = !canInteract || !hasContent;
+                // Кнопка и инпут активны, если нет загрузки
+                isButtonDisabled = !canInteract || !hasContent;
                 isInputDisabled = !canInteract;
             } else if (!currentChatId) {
                  // Состояние после ошибки создания анонимного чата?
                  placeholder = "Ошибка. Обновите страницу.";
-                 isDisabled = true;
+                 isButtonDisabled = true;
                  isInputDisabled = true;
             }
-            // Иначе (анонимный чат создан и активен): isDisabled и isInputDisabled зависят от canInteract и hasContent
+             // Если анонимный чат создан (currentChatId есть), isButtonDisabled/isInputDisabled зависят от canInteract/hasContent
         }
 
-        sendButton.disabled = isDisabled;
+        // Применяем состояния
+        sendButton.disabled = isButtonDisabled;
         messageInput.disabled = isInputDisabled;
         messageInput.placeholder = placeholder;
-
-        // Если инпут выключен, но по причине отсутствия контента - не блокируем сам инпут
-        if (messageInput.disabled && !hasContent && canInteract && (currentChatId || !authToken)) {
-             messageInput.disabled = false;
-        }
     }
 
-    // Создание нового чата (Только для авторизованных)
     async function handleNewChat() {
-        if (isLoadingApi || !authToken) return; // Не даем создавать чат неавторизованным через кнопку
+        if (isLoadingApi || !authToken) return;
         chatListPlaceholder.textContent = "Создание чата...";
         chatListPlaceholder.classList.remove('hidden');
-        chatListUl.prepend(chatListPlaceholder); // Показываем индикатор в списке
+        chatListUl.prepend(chatListPlaceholder);
 
         try {
-            // is_anonymous: false - чат для авторизованного пользователя
-            const newChat = await apiRequest('/chats/', 'POST', { is_anonymous: false }, true); // requireAuth = true
-            // Добавляем пустой массив messages, если API его не возвращает при создании
-            const chatToAdd = { ...newChat, messages: [] };
-            userChats.unshift(chatToAdd);
+            const newChat = await apiRequest('/chats/', 'POST', {}, true);
+            const chatToAdd = { messages: [], ...newChat }; // Добавляем messages, если API не вернул
+            userChats.unshift(chatToAdd); // Добавляем в начало списка
             renderChatList(); // Перерисовать список
             handleSelectChat(newChat.id); // Сразу выбрать новый чат
-            closeMobileSidebar(); // Закрыть сайдбар на мобилке
+            // closeMobileSidebar(); // Закроется в handleSelectChat или если уже не мобильный режим
+
         } catch (error) {
-            // Ошибка показана в apiRequest/showChatError
-            // showChatError(`Не удалось создать чат: ${error.message}`);
             if (userChats.length === 0) {
                 chatListPlaceholder.textContent = "Ошибка создания чата.";
                 chatListPlaceholder.classList.remove('hidden');
             } else {
-                chatListPlaceholder.classList.add('hidden'); // Скрыть индикатор, если есть другие чаты
+                chatListPlaceholder.classList.add('hidden'); // Скрыть индикатор
             }
-            renderChatList(); // Обновить список, убрав плейсхолдер, если нужно
+            renderChatList(); // Обновить список
         }
     }
 
-
-    // Выбор чата (Только для авторизованных)
     async function handleSelectChat(chatId) {
          if (chatId === currentChatId || isLoadingMessages || !authToken) return;
          await loadChatHistory(chatId); // Загрузит историю
+         // Закрыть мобильный сайдбар после выбора чата
+         if (isSidebarVisibleMobile) {
+             closeMobileSidebar();
+         }
     }
 
-
-    // Удаление чата (Только для авторизованных)
     async function handleDeleteChat(chatIdToDelete) {
         if (!chatIdToDelete || isLoadingApi || !authToken) return;
-        if (!confirm("Вы уверены, что хотите удалить этот чат? Это действие необратимо.")) {
+        const chatToDelete = userChats.find(c => c.id === chatIdToDelete);
+        const chatTitleConfirm = chatToDelete?.title || `Чат ${chatIdToDelete.substring(0,4)}`;
+        if (!confirm(`Вы уверены, что хотите удалить "${chatTitleConfirm}"? Это действие необратимо.`)) {
             return;
         }
 
         const chatItemElement = chatListUl.querySelector(`.chat-item[data-chat-id="${chatIdToDelete}"]`);
-        if (chatItemElement) chatItemElement.style.opacity = '0.5'; // Визуальный индикатор
+        if (chatItemElement) chatItemElement.style.opacity = '0.5';
 
         try {
-            await apiRequest(`/chats/${chatIdToDelete}`, 'DELETE', null, true); // requireAuth = true
-            userChats = userChats.filter(chat => chat.id !== chatIdToDelete); // Удаляем из локального кеша
-            renderChatList(); // Перерисовываем список
+            await apiRequest(`/chats/${chatIdToDelete}`, 'DELETE', null, true);
+            userChats = userChats.filter(chat => chat.id !== chatIdToDelete);
+            renderChatList();
 
-            // Если удалили активный чат
             if (currentChatId === chatIdToDelete) {
                 currentChatId = null;
-                clearChatbox(); // Очистить окно сообщений
-                chatbox.innerHTML = '<div class="placeholder-message">Выберите или создайте чат.</div>';
-                // Автоматически выбрать первый чат, если он остался
+                clearChatbox(); // Использует is-visually-hidden
                 if (userChats.length > 0) {
-                    handleSelectChat(userChats[0].id);
+                    handleSelectChat(userChats[0].id); // Выбрать первый (новейший)
                 } else {
-                     // Плейсхолдер уже показан в renderChatList
+                    chatbox.innerHTML = '<div class="placeholder-message">Чатов нет. Создайте новый!</div>';
+                    renderChatList(); // Обновит плейсхолдер
                 }
             }
             console.log(`Chat ${chatIdToDelete} deleted successfully.`);
         } catch (error) {
-            // Ошибка показана в apiRequest/showChatError
-            if (chatItemElement) chatItemElement.style.opacity = '1'; // Восстанавливаем видимость при ошибке
+            showChatError(`Не удалось удалить чат: ${error.message}`);
+            if (chatItemElement) chatItemElement.style.opacity = '1';
         } finally {
-             updateSendButtonState(); // Обновляем состояние кнопок
+             updateSendButtonState();
         }
     }
 
@@ -574,267 +513,198 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Логика Аутентификации ---
     async function handleLogin(email, password) {
          try {
-            const data = await apiRequest('/login', 'POST', { email, password }, false); // requireAuth = false
+            const data = await apiRequest('/login', 'POST', { email, password }, false);
             authToken = data.access_token;
-            // Пробуем извлечь email из токена (может быть не email, зависит от JWT)
             try {
                  const payload = JSON.parse(atob(authToken.split('.')[1]));
-                 userEmail = payload.email || payload.sub || 'Пользователь'; // Используем email или sub
+                 userEmail = payload.email || payload.sub || 'Пользователь';
             } catch (e) {
-                console.error("Token decode failed", e);
-                userEmail = 'Пользователь';
+                console.error("Token decode failed", e); userEmail = 'Пользователь';
             }
-
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('userEmail', userEmail);
-            authSection.classList.remove('visible'); // Закрыть модалку
-            currentChatId = null; // Сбрасываем ID анонимного чата, если он был
-            isInitialAnonymousView = false; // Выходим из начального анонимного вида
-            updateAuthUI(); // Обновить кнопки, показать сайдбар
-            await loadUserChats(); // Загрузить чаты пользователя
-         } catch (error) {
-            // Ошибка уже показана в модалке через showAuthError
-            console.error("Login failed:", error);
-         }
+            authSection.classList.remove('visible');
+            currentChatId = null; isInitialAnonymousView = false;
+            updateAuthUI(); // Обновит UI и вызовет initializeAppUI
+            await loadUserChats(); // Загрузит чаты пользователя
+         } catch (error) { console.error("Login failed:", error); }
      }
      async function handleRegister(email, password) {
          try {
-             // Регистрируем, не требуя аутентификации
-             await apiRequest('/register', 'POST', { email, password }, false); // requireAuth = false
+             await apiRequest('/register', 'POST', { email, password }, false);
              alert("Регистрация прошла успешно! Пожалуйста, войдите.");
-             switchAuthMode(true); // Переключить на форму входа
-             emailInput.value = email; // Подставить email
-             passwordInput.value = '';
-             passwordInput.focus();
-         } catch (error) {
-              // Ошибка уже показана в модалке через showAuthError
-             console.error("Registration failed:", error);
-         }
+             switchAuthMode(true);
+             emailInput.value = email; passwordInput.value = ''; passwordInput.focus();
+         } catch (error) { console.error("Registration failed:", error); }
       }
      function handleLogout() {
-          // Очищаем все пользовательские данные
           authToken = null; userEmail = null; currentChatId = null; userChats = [];
           localStorage.removeItem('authToken'); localStorage.removeItem('userEmail');
-
-          updateAuthUI(); // Обновить кнопки, скрыть сайдбар
-          // renderChatList() вызовется из updateAuthUI -> initializeAppUI
-          // clearChatbox() вызовется из updateAuthUI -> initializeAppUI
+          updateAuthUI(); // Обновит UI и вызовет initializeAppUI
     }
-
-    // Переключение режима в модалке (Вход/Регистрация)
      function switchAuthMode(toLogin) {
           isLoginMode = toLogin;
           authTitle.textContent = isLoginMode ? 'Вход' : 'Регистрация';
           authSubmitButton.textContent = isLoginMode ? 'Войти' : 'Зарегистрироваться';
           switchAuthModeButton.textContent = isLoginMode ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти';
-          hideErrors(); // Скрыть предыдущие ошибки
-          authForm.reset(); // Очистить поля формы
+          hideErrors(); authForm.reset();
           if (isLoginMode) emailInput.focus(); else emailInput.focus();
       }
 
     // --- Загрузка начального состояния ---
     async function loadUserChats() {
-           if (!authToken) { // Не грузить, если не авторизован
-               renderChatList(); // Просто покажет "Войдите..."
-               return;
-           }
+           if (!authToken) { renderChatList(); return; }
            chatListPlaceholder.textContent = "Загрузка чатов...";
            chatListPlaceholder.classList.remove('hidden');
-           chatListUl.innerHTML = ''; // Очистить список перед загрузкой
+           chatListUl.innerHTML = '';
 
            try {
-               const chats = await apiRequest('/chats/', 'GET', null, true); // requireAuth = true
-               // Убедимся, что chats это массив
+               const chats = await apiRequest('/chats/', 'GET', null, true);
                userChats = Array.isArray(chats) ? chats : [];
-               renderChatList(); // Отобразить загруженные чаты
+               userChats = userChats.map(chat => ({ messages: [], ...chat })); // Добавить messages если нет
+               renderChatList(); // Отобразит чаты или "Чатов нет"
 
-               // Если нет активного чата И есть загруженные чаты -> выбрать первый
+               // Выбор чата после загрузки
                if (!currentChatId && userChats.length > 0) {
-                   handleSelectChat(userChats[0].id);
+                   handleSelectChat(userChats[0].id); // Выбрать первый (новейший)
                }
-               // Если активный чат был (например, остался с прошлой сессии, но не был загружен)
                else if (currentChatId && !userChats.some(c => c.id === currentChatId)) {
-                   currentChatId = null; // Сбросить ID, если его нет в списке
-                   if (userChats.length > 0) {
-                       handleSelectChat(userChats[0].id); // Выбрать первый
-                   } else {
-                        clearChatbox(); // Очистить чат, если чатов нет
-                        chatbox.innerHTML = '<div class="placeholder-message">Чатов не найдено. Создайте новый!</div>';
-                   }
+                   currentChatId = null; // Сбросить ID, если активный чат удален/не найден
+                   if (userChats.length > 0) { handleSelectChat(userChats[0].id); }
+                   else { clearChatbox(); chatbox.innerHTML = '<div class="placeholder-message">Чатов не найдено.</div>'; }
                }
-                // Если currentChatId валиден и есть в списке, loadChatHistory был вызван ранее или вызовется сейчас
-                else if (currentChatId) {
-                    // Возможно, стоит принудительно перезагрузить историю активного чата?
-                    // await loadChatHistory(currentChatId); // Спорно, может быть излишне
-                    setActiveChatItem(currentChatId); // Просто подсветить активный
-                }
-                // Если чатов 0, renderChatList уже показал сообщение
-                 else if (userChats.length === 0) {
-                     clearChatbox();
-                     chatbox.innerHTML = '<div class="placeholder-message">Создайте свой первый чат, нажав "+" слева.</div>';
-                 }
+               else if (currentChatId) { // Активный чат есть в списке
+                   setActiveChatItem(currentChatId); // Просто подсветить
+                   // Возможно, стоит обновить историю, если мы не уверены в ее актуальности
+                   // await loadChatHistory(currentChatId);
+               }
+               else if (userChats.length === 0) { // Чатов нет
+                   clearChatbox();
+                   chatbox.innerHTML = '<div class="placeholder-message">Создайте свой первый чат, нажав "+" слева.</div>';
+               }
 
            } catch (error) {
-                // Ошибка уже показана в showChatError (если не сессия)
-                // renderChatList(); // Показать сообщение об ошибке в списке
                 chatListPlaceholder.textContent = "Ошибка загрузки чатов.";
                 chatListPlaceholder.classList.remove('hidden');
+                chatListUl.innerHTML = ''; userChats = [];
+                clearChatbox();
+                chatbox.innerHTML = `<div class="placeholder-message error">Не удалось загрузить чаты. Попробуйте обновить страницу.</div>`;
            } finally {
-                updateSendButtonState(); // Обновить кнопки
+                updateSendButtonState();
            }
        }
 
-    // --- Мобильный сайдбар ---
+    // --- Мобильный сайдбар (ИСПОЛЬЗУЕТ sidebar-visible-mobile) ---
      function openMobileSidebar() {
-        // Открываем только если авторизован
         if (!isSidebarVisibleMobile && authToken) {
-            chatListSidebar.classList.remove('hidden'); // Убираем hidden ДО анимации
-            requestAnimationFrame(() => { // Даем браузеру обработать удаление hidden
-                chatListSidebar.classList.add('visible');
-                mobileOverlay.classList.add('visible');
-            });
-            isSidebarVisibleMobile = true;
+            // Убираем display:none, если он был (важно перед transform)
+            chatListSidebar.classList.remove('hidden');
+             // Даем браузеру обработать remove('hidden') перед transform
+             requestAnimationFrame(() => {
+                 chatListSidebar.classList.add('sidebar-visible-mobile');
+                 mobileOverlay.classList.add('visible');
+             });
+             isSidebarVisibleMobile = true;
+             mobileSidebarToggle.setAttribute('aria-expanded', 'true');
         }
     }
     function closeMobileSidebar() {
          if (isSidebarVisibleMobile) {
-            chatListSidebar.classList.remove('visible');
+             chatListSidebar.classList.remove('sidebar-visible-mobile');
              mobileOverlay.classList.remove('visible');
              isSidebarVisibleMobile = false;
-             // Добавляем hidden с задержкой, чтобы анимация успела пройти
-             // Условие window.innerWidth <= 768 здесь излишне, т.к. visible/hidden класс управляет им
-             chatListSidebar.addEventListener('transitionend', () => {
-                 // Добавляем hidden только если сайдбар все еще должен быть скрыт
+             mobileSidebarToggle.setAttribute('aria-expanded', 'false');
+             // Можно добавить hidden после завершения анимации transform,
+             // чтобы вернуть display:none, если это важно для доступности или др.
+             /* chatListSidebar.addEventListener('transitionend', () => {
                  if (!isSidebarVisibleMobile) {
-                    chatListSidebar.classList.add('hidden');
+                     chatListSidebar.classList.add('hidden');
                  }
-             }, { once: true }); // Обработчик сработает один раз
+             }, { once: true }); */
          }
     }
 
 
     // --- Авто-ресайз Textarea ---
     function adjustTextareaHeight() {
-        const MAX_HEIGHT_PX = 120; // Максимальная высота в пикселях
-        messageInput.style.height = 'auto'; // Сброс высоты для пересчета scrollHeight
-        // Добавляем 2px буфер, чтобы избежать ненужного скроллбара при точном совпадении
+        const MAX_HEIGHT_PX = 120;
+        messageInput.style.height = 'auto';
         const scrollHeight = messageInput.scrollHeight + 2;
         const newHeight = Math.min(scrollHeight, MAX_HEIGHT_PX);
-
         messageInput.style.height = newHeight + 'px';
-        // Показываем скролл только если контент превышает максимальную высоту
         messageInput.style.overflowY = scrollHeight > MAX_HEIGHT_PX ? 'auto' : 'hidden';
     }
 
 
     // --- Инициализация и обработчики событий ---
-     messageForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const content = messageInput.value.trim();
-        if (content) {
-            sendMessage(content);
-        }
-        // Нет необходимости проверять currentChatId/authToken здесь, т.к. sendMessage сам разберется
-    });
-    messageInput.addEventListener('input', () => {
-        adjustTextareaHeight();
-        updateSendButtonState(); // Обновлять состояние кнопки при вводе
-    });
-    messageInput.addEventListener('keydown', (e) => {
-        // Отправка по Enter, если не зажат Shift
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // Предотвратить перенос строки
-            if (!sendButton.disabled) {
-                 messageForm.requestSubmit(); // Вызвать submit формы
-            }
-        }
-    });
-
-    // Кнопки аутентификации
-    authButton.addEventListener('click', () => {
-        authSection.classList.add('visible');
-        switchAuthMode(true); // По умолчанию форма входа
-        hideErrors();
-        emailInput.focus(); // Фокус на email при открытии
-    });
-    logoutButton.addEventListener('click', handleLogout);
-    cancelAuthButton.addEventListener('click', () => { authSection.classList.remove('visible'); });
-    switchAuthModeButton.addEventListener('click', () => switchAuthMode(!isLoginMode));
-    authForm.addEventListener('submit', (e) => {
-         e.preventDefault();
-         const email = emailInput.value.trim();
-         const password = passwordInput.value;
-         if (!email || !password) {
-             showAuthError("Необходимо ввести email и пароль.");
-             return;
-         }
-         hideErrors(); // Скрыть предыдущую ошибку перед отправкой
-         if (isLoginMode) handleLogin(email, password);
-         else handleRegister(email, password);
-     });
-
-     // Кнопки управления чатами (только для авторизованных)
-    newChatButton.addEventListener('click', handleNewChat);
-
-    // Мобильный сайдбар
-    mobileSidebarToggle.addEventListener('click', (e) => {
-        e.stopPropagation(); // Предотвратить закрытие по клику на оверлей
-        if (isSidebarVisibleMobile) closeMobileSidebar();
-        else openMobileSidebar();
-    });
-    mobileOverlay.addEventListener('click', closeMobileSidebar);
+     messageForm.addEventListener('submit', (e) => { e.preventDefault(); const content = messageInput.value.trim(); if (content && !sendButton.disabled) { sendMessage(content); } });
+     messageInput.addEventListener('input', () => { adjustTextareaHeight(); updateSendButtonState(); });
+     messageInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendButton.disabled) { messageForm.requestSubmit(); } } });
+     authButton.addEventListener('click', () => { authSection.classList.add('visible'); switchAuthMode(true); hideErrors(); emailInput.focus(); });
+     logoutButton.addEventListener('click', handleLogout);
+     cancelAuthButton.addEventListener('click', () => { authSection.classList.remove('visible'); });
+     authSection.addEventListener('click', (e) => { if (e.target === authSection) { authSection.classList.remove('visible'); } });
+     switchAuthModeButton.addEventListener('click', () => switchAuthMode(!isLoginMode));
+     authForm.addEventListener('submit', (e) => { e.preventDefault(); if (isLoadingApi) return; const email = emailInput.value.trim(); const password = passwordInput.value; if (!email || !password) { showAuthError("Необходимо ввести email и пароль."); return; } hideErrors(); if (isLoginMode) handleLogin(email, password); else handleRegister(email, password); });
+     newChatButton.addEventListener('click', handleNewChat);
+     mobileSidebarToggle.addEventListener('click', (e) => { e.stopPropagation(); if (isSidebarVisibleMobile) closeMobileSidebar(); else openMobileSidebar(); });
+     mobileOverlay.addEventListener('click', closeMobileSidebar);
+     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isSidebarVisibleMobile) { closeMobileSidebar(); } });
 
 
-    // --- Начальная настройка UI приложения ---
+    // --- Начальная настройка UI приложения (ИСПОЛЬЗУЕТ is-visually-hidden и .hidden) ---
     function initializeAppUI() {
         console.log("Initializing App UI, authToken:", !!authToken);
+        hideErrors();
         if (authToken) {
             // Авторизованный пользователь
             console.log("Auth user flow");
-            initialAnonymousStateContainer.classList.add('hidden'); // Скрыть анонимный блок
-             // Убедиться, что форма в правильном месте
-             if (!messageFormContainer.contains(messageForm)) {
+            initialAnonymousStateContainer.classList.add('is-visually-hidden'); // Скрываем плавно
+            if (!messageFormContainer.contains(messageForm)) {
                   messageFormContainer.appendChild(messageForm);
              }
-            messageFormContainer.classList.remove('hidden'); // Показать стандартный контейнер формы
-            chatbox.classList.remove('hidden'); // Показать чатбокс
+            messageFormContainer.classList.remove('is-visually-hidden'); // Показываем плавно
+            chatbox.classList.remove('is-visually-hidden'); // Показываем плавно
 
-            if (userChats.length === 0 && !isLoadingApi) { // Если чаты еще не загружены, loadUserChats покажет плейсхолдер
-                 clearChatbox(); // Очистить от старого
-                 chatbox.innerHTML = '<div class="placeholder-message">Загрузка чатов...</div>'; // Начальный плейсхолдер
-            } else if (!currentChatId && userChats.length > 0) {
-                 clearChatbox();
-                 chatbox.innerHTML = '<div class="placeholder-message">Выберите чат из списка слева.</div>';
-            } else if (!currentChatId && userChats.length === 0) {
-                 clearChatbox();
-                 chatbox.innerHTML = '<div class="placeholder-message">Создайте свой первый чат, нажав "+" слева.</div>';
+            // Сайбар показывается/скрывается через .hidden в updateAuthUI
+            renderChatList();
+
+            // Плейсхолдеры в чатбоксе
+            if (!currentChatId && userChats.length > 0 && !isLoadingMessages) {
+                 clearChatbox(); chatbox.innerHTML = '<div class="placeholder-message">Выберите чат из списка слева.</div>';
+            } else if (!currentChatId && userChats.length === 0 && !isLoadingApi) {
+                 clearChatbox(); chatbox.innerHTML = '<div class="placeholder-message">Создайте свой первый чат, нажав "+" слева.</div>';
+            } else if (!currentChatId) {
+                 clearChatbox(); // Покажет "Загрузка..." или сообщение об ошибке из loadUserChats
             }
-            // Если currentChatId есть, история загрузится или уже загружена
-            renderChatList(); // Отобразить список чатов
         } else {
             // Анонимный пользователь
             console.log("Anonymous user flow");
-            chatListSidebar.classList.add('hidden'); // Скрыть сайдбар
-            mobileSidebarToggle.style.display = 'none'; // Скрыть бургер
-             userChats = []; // Очистить список чатов
-             currentChatId = null; // Сбросить ID
-             setupInitialAnonymousUI(); // Показать начальный анонимный UI
-             renderChatList(); // Покажет "Войдите..." (хотя сайдбар скрыт)
+            // Сайбар скрыт через .hidden в updateAuthUI
+            userChats = []; currentChatId = null;
+            setupInitialAnonymousUI(); // Показывает анонимный блок плавно
+            renderChatList(); // Покажет "Войдите..."
         }
-        adjustTextareaHeight(); // Настроить высоту textarea
-        updateSendButtonState(); // Настроить состояние кнопки отправки
+        adjustTextareaHeight();
+        updateSendButtonState();
     }
 
 
     // --- Полная инициализация приложения ---
-    function initializeApp() {
+    async function initializeApp() {
         console.log("initializeApp called");
-        updateAuthUI(); // Сначала обновить кнопки/email/видимость сайдбара на основе токена
-        // initializeAppUI() вызовется из updateAuthUI
-        // loadUserChats() вызовется из handleLogin или initializeAppUI (если уже был токен)
+        updateAuthUI(); // Определит видимость базовых элементов UI
+        if (authToken) {
+             await loadUserChats(); // Загрузит чаты, если пользователь авторизован
+        }
+        // initializeAppUI вызовется из updateAuthUI или после loadUserChats
+        console.log("App Initialized");
     }
 
     // Запускаем приложение
     initializeApp();
+
+    // Добавляем слушатель изменения размера окна для корректного переключения UI сайдбара
+    window.addEventListener('resize', updateAuthUI);
 
 });
